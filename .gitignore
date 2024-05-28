@@ -1,6 +1,8 @@
 .jxbrowser.userdata/
 .metadata/
 .tempFiles/
+dvt/
+RemoteSystemsTempFiles/
 
 # Ignore all .launches directories
 **/.launches/
