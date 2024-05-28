@@ -1,0 +1,21 @@
+void enter_low_power_mode() {
+    __bis_SR_register(LPM4_bits); // Enter low-power mode 4
+}
+
+int main(void) {
+    WDTCTL = WDTPW | WDTHOLD; // Stop watchdog timer
+
+    // Main loop
+    while (1) {
+        // Your application code here
+
+        // Check for shutdown condition
+        if (shutdown_requested) {
+            enter_low_power_mode();
+            break; // Exit the main loop
+        }
+    }
+
+    // Additional cleanup code if needed
+    return 0;
+}

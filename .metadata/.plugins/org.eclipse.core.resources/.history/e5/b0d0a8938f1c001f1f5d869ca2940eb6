@@ -1,0 +1,25 @@
+#include <msp430.h>
+
+void enter_low_power_mode() {
+    __bis_SR_register(LPM4_bits); // Enter low-power mode 4
+}
+
+/**
+ * main.c
+ */
+int main(void)
+{
+	WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
+
+	while (1) {
+        // Your application code here
+
+        // Check for shutdown condition
+        if (shutdown_requested) {
+            enter_low_power_mode();
+            break; // Exit the main loop
+        }
+	}
+
+	return 0;
+}
