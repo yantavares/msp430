@@ -1,3 +1,7 @@
+.jxbrowser.userdata/
+.metadata/
+.tempFiles/
+
 # Ignore all .launches directories
 **/.launches/
 

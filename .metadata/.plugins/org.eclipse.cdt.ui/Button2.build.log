@@ -1,8 +1,0 @@
-
-**** Build of configuration Debug for project Button2 ****
-
-/home/yan/ti/ccs1271/ccs/utils/bin/gmake -k -j 16 all -O 
- 
-gmake[1]: 'Button2.out' is up to date.
-
-**** Build Finished ****
