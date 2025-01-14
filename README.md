@@ -10,10 +10,4 @@ To run the projects, I recommend using Code Composer Studio (IDE made by Texas I
 
 ## Project Organization
 
-Directories with the prefix `_Exp[n]` contain experiments from the Microprocessor Systems (SISMIC) course at the University of Brasília, while other directories contain personal projects and tests.
-
-Each directory typically contains the source code, project files, and any relevant documentation or notes specific to the experiment or project.
-
-## Contact
-
-If you have any questions or suggestions, feel free to contact me at [my email](mailto:yantdo1@gmail.com).
+Each project is organized in a folder containing the exercise number and a brief description of the project.
