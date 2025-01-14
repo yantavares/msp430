@@ -10,4 +10,4 @@ To run the projects, I recommend using Code Composer Studio (IDE made by Texas I
 
 ## Project Organization
 
-Each project is organized in a folder containing the exercise number and a brief description of the project.
+Each project is organized in a folder containing the exercises and a brief description of each one in the `README.md` file.
