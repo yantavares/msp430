@@ -10,8 +10,8 @@ int main(void)
     USCI_B0_config();
 
     lcdInit();
-    lcdWrite("Piscando...");
-    blink();
+    lcdWrite("Teste de quebra\nde linha");
+    turnOnBacklight();
 
     return 0;
 }
@@ -57,11 +57,25 @@ uint8_t i2cSend(uint8_t addr, uint8_t data)
     return 0;
 }
 
+void turnOnBacklight(void)
+{
+    uint8_t addr = lcdAddr();
+    i2cSend(addr, BIT3);
+    __delay_cycles(200000);
+}
+
+void clearScreen(void)
+{
+    uint8_t addr = lcdAddr();
+    i2cSend(addr, 0x01);
+    __delay_cycles(200000);
+}
+
 void blink(void)
 {
     uint8_t addr = lcdAddr();
     int i;
-    for (i = 0; i < 10; i++)
+    for (i = 0; i < 11; i++)
     {
         i2cSend(addr, BIT3);
         __delay_cycles(500000);
@@ -113,18 +127,49 @@ void lcdInit(void)
     lcdWriteNibble(0x3, 0);
     lcdWriteNibble(0x3, 0);
     lcdWriteNibble(0x2, 0);
-    __delay_cycles(15000);
 
     lcdWriteByte(0x28, 0);
     lcdWriteByte(0x0C, 0);
     lcdWriteByte(0x06, 0);
     lcdWriteByte(0x01, 0);
+    __delay_cycles(400000);
 }
 
 void lcdWrite(char *str)
 {
+    uint8_t pos = 0;
+
     while (*str)
     {
-        lcdWriteByte(*str++, 1);
+        if (*str == '\n')
+        {
+            if (pos <= 16)
+            {
+                lcdWriteByte(0xC0, 0);
+                str++;
+                pos = 16;
+            }
+            else
+            {
+                lcdWriteByte(0x80, 0);
+                str++;
+                pos = 0;
+            }
+        }
+        else
+        {
+
+            if (pos == 16)
+            {
+                lcdWriteByte(0xC0, 0);
+            }
+            if (pos == 32)
+            {
+                lcdWriteByte(0x80, 0);
+                pos = 0;
+            }
+            lcdWriteByte(*str++, 1);
+            pos++;
+        }
     }
 }

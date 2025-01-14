@@ -31,6 +31,22 @@ void lcdWrite(char *str)
 
     while (*str)
     {
+        if (*str == '\n')
+        {
+            if (pos < 16)
+            {
+                lcdWriteByte(0xC0, 0);
+                str++;
+                pos = 16;
+            }
+            else
+            {
+                lcdWriteByte(0x80, 0);
+                str++;
+                pos = 0;
+            }
+        }
+
         if (pos == 16)
         {
             lcdWriteByte(0xC0, 0);
