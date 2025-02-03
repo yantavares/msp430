@@ -93,6 +93,42 @@ Create `uint8_t lcdBusy()`:
 
 ---
 
+#### **Exercise 12: Read ADC Value**
+
+Write `uint16_t adcRead(uint8_t pin)` to perform a single ADC conversion on any pin of port P6:
+
+- Assume worst-case sensor resistance of 50kΩ.
+- Use 12-bit resolution.
+- Configure ADC in **single-channel, single-conversion mode**.
+
+---
+
+#### **Exercise 16: Joystick-Controlled LED Brightness**
+
+Use the joystick’s **X and Y axes** to control the brightness of the **red and green LEDs** on the LaunchPad:
+
+- X-axis → Controls red LED brightness.
+- Y-axis → Controls green LED brightness.
+- Implement **PWM at 100 Hz** with **256 levels (0-255).**
+- Use an **8-bit ADC resolution**.
+- Sample joystick position **every 20 ms (50 Hz).**
+- Configure **Timer B channels 1 and 2** to generate PWM signals.
+- Utilize **DMA** to transfer ADC conversion results directly to PWM registers. If DMA is not used, employ ADC interrupts.
+
+---
+
+#### **Exercise 21: UART Communication with PC**
+
+Enable **serial communication between the MSP430 and a PC** via UART:
+
+- Use **USCI_A1** (internal connection on LaunchPad).
+- Transmit strings via `void uartPrint(char *str)`.
+- Receive data via **interrupt-driven circular buffer** (32-character size).
+- Use a **serial terminal** (e.g., Code Composer Studio terminal) to monitor messages.
+- Ensure the baud rate matches the **PC’s serial port settings**.
+
+---
+
 ### **Problem 3: Digital Oscilloscope with ADC, LCD, and UART**
 
 **Objective:**
