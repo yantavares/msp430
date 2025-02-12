@@ -3,6 +3,7 @@
 #include "vl53l0x_platform.h"
 
 uint16_t distMili;
+uint8_t status;
 
 int main(void)
 {
@@ -46,7 +47,8 @@ int main(void)
 
     while (1)
     {
-        VL53L0X_PerformSingleRangingMeasurement(&dev, &RangingMeasurementData);
+
+        status = VL53L0X_PerformSingleRangingMeasurement(&dev, &RangingMeasurementData);
         VL53L0X_GetLimitCheckCurrent(&dev, VL53L0X_CHECKENABLE_RANGE_IGNORE_THRESHOLD, &LimitCheckCurrent);
 
         distMili = RangingMeasurementData.RangeMilliMeter;
