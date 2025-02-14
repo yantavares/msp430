@@ -9,42 +9,24 @@ static void configPWM(void);
 int main(void)
 {
     // -----------------------------------------------------------------------
-    // Stop Watchdog and configure LED pins
+    // Stop Watchdog
     // -----------------------------------------------------------------------
     WDTCTL = WDTPW | WDTHOLD;
 
-    // If you want to keep P1.0 as a debug LED, you can. (Not strictly needed)
-    // P1DIR |= BIT0;
+    // -----------------------------------------------------------------------
+    // Configurar Timer B0 -> P3.6 para PWM
+    // -----------------------------------------------------------------------
+    configPWM(); // Configura Timer B0 para PWM em P3.6 (TB0.6)
 
     // -----------------------------------------------------------------------
-    // Configure Timer B0 -> P4.7 for PWM
+    // I2C Setup para VL53L0X usando UCB0
     // -----------------------------------------------------------------------
-    configPWM(); // Sets up Timer B0 for PWM at P4.7
-
-    // -----------------------------------------------------------------------
-    // I2C Setup for VL53L0X using UCB0
-    // -----------------------------------------------------------------------
-    // 1) Put eUSCI_B in reset
-    UCB0CTL1 |= UCSWRST;
-
-    // 2) I2C mode, master, sync
-    UCB0CTL0 = UCMST | UCMODE_3 | UCSYNC;
-    // 3) Use SMCLK as source
-    UCB0CTL1 = UCSSEL__SMCLK | UCSWRST;
-    // 4) Set I2C clock: SMCLK / 10 => ~100kHz if SMCLK ~1MHz
-    UCB0BRW = 10;
-    // 5) Pins for I2C: P3.0 (SDA), P3.1 (SCL)
-    P3SEL |= BIT0 | BIT1;
-    // 6) Release eUSCI_B from reset
-    UCB0CTL1 &= ~UCSWRST;
-
-    // -----------------------------------------------------------------------
-    // (Optional) UART Setup on USCI_A1 (if you need it)
-    // -----------------------------------------------------------------------
-    P4SEL |= BIT4 | BIT5;     // P4.4 = TX, P4.5 = RX (for UCA1)
-    UCA1BRW = 54;             // Example ~ 19200 baud
-    UCA1MCTL = UCBRS_5;       // Modulation
-    UCA1CTL1 = UCSSEL__SMCLK; // SMCLK as source
+    UCB0CTL1 |= UCSWRST;  // Coloca eUSCI_B em reset
+    UCB0CTL0 = UCMST | UCMODE_3 | UCSYNC;  // Modo I2C, master, sync
+    UCB0CTL1 = UCSSEL__SMCLK | UCSWRST;    // Usa SMCLK como clock
+    UCB0BRW = 10;  // Define Clock I2C (SMCLK/10 ~ 100 kHz)
+    P3SEL |= BIT0 | BIT1;  // P3.0 (SDA), P3.1 (SCL) para I2C
+    UCB0CTL1 &= ~UCSWRST;  // Libera eUSCI_B do reset
 
     // -----------------------------------------------------------------------
     // VL53L0X Configuration
@@ -59,14 +41,12 @@ int main(void)
     VL53L0X_DataInit(&dev);
     VL53L0X_StaticInit(&dev);
 
-    // Calibration & reference SPAD management
+    // Calibração & SPAD
     VL53L0X_PerformRefCalibration(&dev, &VhvSettings, &PhaseCal);
     VL53L0X_PerformRefSpadManagement(&dev, &refSpadCount, &isApertureSpads);
 
-    // Single ranging mode
+    // Configura sensor VL53L0X para Single Ranging
     VL53L0X_SetDeviceMode(&dev, VL53L0X_DEVICEMODE_SINGLE_RANGING);
-
-    // Enable some limit checks
     VL53L0X_SetLimitCheckEnable(&dev, VL53L0X_CHECKENABLE_SIGMA_FINAL_RANGE, 1);
     VL53L0X_SetLimitCheckEnable(&dev, VL53L0X_CHECKENABLE_SIGNAL_RATE_FINAL_RANGE, 1);
     VL53L0X_SetLimitCheckEnable(&dev, VL53L0X_CHECKENABLE_RANGE_IGNORE_THRESHOLD, 1);
@@ -78,11 +58,11 @@ int main(void)
     VL53L0X_RangingMeasurementData_t RangingMeasurementData;
 
     // -----------------------------------------------------------------------
-    // Main Loop
+    // Loop principal
     // -----------------------------------------------------------------------
     while (1)
     {
-        // Perform a single measurement
+        // Faz leitura única do sensor
         VL53L0X_PerformSingleRangingMeasurement(&dev, &RangingMeasurementData);
         VL53L0X_GetLimitCheckCurrent(&dev,
                                      VL53L0X_CHECKENABLE_RANGE_IGNORE_THRESHOLD,
@@ -91,54 +71,46 @@ int main(void)
         distMili = RangingMeasurementData.RangeMilliMeter;
 
         // -------------------------------------------------------------------
-        // Simple distance-to-brightness mapping:
-        // - If dist > 300mm:  LED off (CCR1=0)
-        // - If dist < 50mm:   LED max brightness (CCR1 = TB0CCR0)
-        // - Else: linear interpolation between those distances
+        // Mapeamento distância -> duty cycle do motor vibracall
+        //  - Se dist > 300mm: motor OFF (CCR6 = 0)
+        //  - Se dist < 50mm:  motor 50% (CCR6 = 5000)
+        //  - Entre 50..300mm: interpolação linear (de 0% até 50%)
         // -------------------------------------------------------------------
         if (distMili > 300)
         {
-            TB0CCR1 = 0; // 0% duty cycle
+            TB0CCR6 = 0;  // 0% duty cycle -> motor desligado
         }
         else if (distMili < 50)
         {
-            TB0CCR1 = TB0CCR0; // 100% duty cycle
+            TB0CCR6 = 5000; // 50% duty cycle máximo
         }
         else
         {
-            // Linear map [50..300] -> [100%..0%]
-            // Range is 250mm wide; let's define slope
-            // slope = (0 - TB0CCR0) / (300 - 50)
-            //       = (-TB0CCR0)/250
-            // brightness = TB0CCR0 + slope*(distMili-50)
-            //            = TB0CCR0 - (TB0CCR0/250)*(distMili-50)
-            //
-            // For TB0CCR0=10000, slope = -10000/250 = -40
-            TB0CCR1 = 10000 - 40 * (distMili - 50);
+            // Interpola linearmente [50mm..300mm] -> [50%..0%]
+            // TB0CCR6 = 5000 - (5000/250)*(distMili-50)
+            TB0CCR6 = 5000 - (20 * (distMili - 50));
         }
 
-        // Optional small delay so we don't loop *too* fast
+        // Delay curto para evitar leitura excessivamente rápida
         __delay_cycles(20000);
     }
 }
 
 // ---------------------------------------------------------------------------
-// Configure Timer B0 for PWM on P4.7
+// Configura Timer B0 para PWM no pino **P3.6** (TB0.6)
 // ---------------------------------------------------------------------------
 static void configPWM(void)
 {
-    // 1) P4.7 as Timer B0 CCR1 output
-    P4DIR |= BIT7;        // P4.7 as output
-    P4SEL |= BIT7;        // Select peripheral
-    PMAPKEYID = 0x02D52;  // Unlock PMAP
-    P4MAP7 = PM_TB0CCR1A; // Map TB0CCR1 output to P4.7
-    PMAPKEYID = 0;        // Lock PMAP
+    // 1) Configura P3.6 como saída de PWM do Timer B0 CCR6
+    P3DIR |= BIT6;   // P3.6 como saída
+    P3SEL |= BIT6;   // Habilita função alternativa (Timer B0)
 
-    // 2) Configure Timer B0
-    TB0CTL = TBSSEL__SMCLK // SMCLK source
-             | MC__UP      // Up mode
-             | TBCLR;      // Clear timer
-    TB0CCR0 = 10000;       // PWM period (~100Hz if SMCLK=1MHz)
-    TB0CCTL1 = OUTMOD_7;   // Reset/Set mode
-    TB0CCR1 = 0;           // Start with LED off
+    // 2) Configura Timer B0 para gerar PWM
+    TB0CTL = TBSSEL__SMCLK  // Usa SMCLK como clock
+           | MC__UP        // Modo UP (conta até TB0CCR0)
+           | TBCLR;        // Limpa o contador
+
+    TB0CCR0 = 10000;        // Período PWM (~100 Hz se SMCLK=1 MHz)
+    TB0CCTL6 = OUTMOD_7;    // Modo Reset/Set
+    TB0CCR6 = 0;            // Começa com duty cycle = 0% (motor OFF)
 }
