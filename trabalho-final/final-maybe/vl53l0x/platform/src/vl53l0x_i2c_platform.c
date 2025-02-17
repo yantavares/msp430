@@ -74,48 +74,39 @@ int32_t VL53L0X_write_multi(uint8_t address, uint8_t index, uint8_t *pdata, int3
 {
     int32_t i;
 
-    /* Configure o endereço do escravo */
     UCB0I2CSA = address;
 
-    /* Configure para modo transmissor e gere a condição de START */
     UCB0CTL1 |= UCTR | UCTXSTT;
 
-    /* Aguarda até que o START seja enviado e o buffer esteja pronto */
     while (!(UCB0IFG & UCTXIFG))
         ;
 
-    /* Envia o endereço do registrador (index) */
     UCB0TXBUF = index;
 
-    /* Aguarda a conclusão do envio do index */
     while (UCB0CTL1 & UCTXSTT)
         ;
 
-    /* Verifica se ocorreu NACK na transmissão do index */
     if (UCB0IFG & UCNACKIFG)
     {
-        UCB0CTL1 |= UCTXSTP; // Gera STOP
+        UCB0CTL1 |= UCTXSTP;
         while (UCB0CTL1 & UCTXSTP)
-            ; // Aguarda final do STOP
+            ;
         return STATUS_FAIL;
     }
 
-    /* Envia os dados do buffer, um por vez */
     for (i = 0; i < count; i++)
     {
         while (!(UCB0IFG & UCTXIFG))
-            ;                 // Aguarda o TXBUF ficar disponível
-        UCB0TXBUF = pdata[i]; // Envia o próximo byte
+            ;
+        UCB0TXBUF = pdata[i];
     }
 
-    /* Aguarda que o último byte seja preparado para transmissão */
     while (!(UCB0IFG & UCTXIFG))
         ;
 
-    /* Gera a condição de STOP */
     UCB0CTL1 |= UCTXSTP;
     while (UCB0CTL1 & UCTXSTP)
-        ; // Aguarda o término da transmissão
+        ;
 
     return STATUS_OK;
 }
@@ -124,50 +115,47 @@ int32_t VL53L0X_read_multi(uint8_t address, uint8_t index, uint8_t *pdata, int32
 {
     int32_t i;
 
-    /* Primeiro: envie o endereço do registrador que se deseja ler */
     UCB0I2CSA = address;
-    UCB0CTL1 |= UCTR | UCTXSTT; // Modo transmissor, gera START
+    UCB0CTL1 |= UCTR | UCTXSTT;
     while (!(UCB0IFG & UCTXIFG))
         ;
     UCB0TXBUF = index;
     while (UCB0CTL1 & UCTXSTT)
-        ; // Aguarda o envio do index
+        ;
 
-    /* Agora, muda para modo receptor para ler os dados */
-    UCB0CTL1 &= ~UCTR;   // Muda para modo receptor
-    UCB0CTL1 |= UCTXSTT; // Gera um REPEATED START para iniciar a leitura
+    UCB0CTL1 &= ~UCTR;
+    UCB0CTL1 |= UCTXSTT;
     while (UCB0CTL1 & UCTXSTT)
-        ; // Aguarda o REPEATED START ser concluído
+        ;
 
     if (count == 1)
     {
-        /* Para leitura de 1 byte: gere o STOP logo após o START */
+
         UCB0CTL1 |= UCTXSTP;
         while (!(UCB0IFG & UCRXIFG))
-            ; // Aguarda o recebimento do byte
+            ;
         pdata[0] = UCB0RXBUF;
     }
     else
     {
-        /* Para leitura de vários bytes */
+
         for (i = 0; i < count - 1; i++)
         {
             while (!(UCB0IFG & UCRXIFG))
-                ; // Aguarda o próximo byte
+                ;
             pdata[i] = UCB0RXBUF;
             if (i == count - 2)
             {
-                /* Antes do último byte, gere o STOP */
+
                 UCB0CTL1 |= UCTXSTP;
             }
         }
-        /* Recebe o último byte */
+
         while (!(UCB0IFG & UCRXIFG))
             ;
         pdata[count - 1] = UCB0RXBUF;
     }
 
-    /* Aguarda o término da condição de STOP */
     while (UCB0CTL1 & UCTXSTP)
         ;
 
